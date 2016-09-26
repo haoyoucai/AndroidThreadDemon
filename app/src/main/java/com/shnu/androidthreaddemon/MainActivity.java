@@ -40,13 +40,10 @@ public class MainActivity extends AppCompatActivity {
 //        handler.sendMessage(message);
         threadB = new ThreadB();
         threadB.start();
-
-
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-
-                message  = Message.obtain();
+                message  = new Message();
                 message.arg1 = 1;
                 message.arg2 = 2;
                 message.what = 3;
@@ -54,16 +51,21 @@ public class MainActivity extends AppCompatActivity {
                 threadB.handlerB.sendMessage(message);
             }
         });
-
     }
-
     public class ThreadB extends Thread {
         private Handler handlerB;
-
+//        handlerB= new Handler() {
+//            @Override
+//            public void handleMessage(Message msg) {
+//                super.handleMessage(msg);
+//                Log.e("Who Am Receive", Thread.currentThread().getName());
+//                Log.e("I am receive a message", msg.toString() + "");
+//            }
+//        };
         @Override
         public void run() {
             super.run();
-//            Looper.prepare();
+            Looper.prepare();
             handlerB = new Handler() {
                 @Override
                 public void handleMessage(Message msg) {
@@ -72,7 +74,7 @@ public class MainActivity extends AppCompatActivity {
                     Log.e("I am receive a message", msg.toString() + "");
                 }
             };
-//            Looper.loop();
+            Looper.loop();
         }
     }
 
