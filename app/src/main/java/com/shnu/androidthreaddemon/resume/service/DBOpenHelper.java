@@ -5,22 +5,22 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
 /**
- * ���ݿ������
+ * 数据库操作类
  * @author Administrator
  *
  */
 public class DBOpenHelper extends SQLiteOpenHelper {
 	private static final String DBNAME = "down.db";
 	private static final int VERSION = 1;
-	
+
 	/**
-	 * ������
+	 * 构造器
 	 * @param context
 	 */
 	public DBOpenHelper(Context context) {
 		super(context, DBNAME, null, VERSION);
 	}
-	
+
 	@Override
 	public void onCreate(SQLiteDatabase db) {
 		db.execSQL("CREATE TABLE IF NOT EXISTS filedownlog (id integer primary key autoincrement, downpath varchar(100), threadid INTEGER, downlength INTEGER)");

@@ -5,13 +5,17 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
-import com.amos.download.R;
+
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -19,162 +23,166 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.shnu.androidthreaddemon.R;
+
 /**
  * @author yangxiaolong
  * @2014-5-6
  */
 public class MainApp extends Activity implements OnClickListener {
 
-	private static final String TAG = MainApp.class.getSimpleName();
+    private static final String TAG = MainApp.class.getSimpleName();
 
-	/** ��ʾ���ؽ���TextView */
-	private TextView mMessageView;
-	/** ��ʾ���ؽ���ProgressBar */
-	private ProgressBar mProgressbar;
+    /**
+     * 显示下载进度TextView
+     */
+    private TextView mMessageView;
+    /**
+     * 显示下载进度ProgressBar
+     */
+    private ProgressBar mProgressbar;
 
-	@Override
-	protected void onCreate(Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);
-		setContentView(R.layout.progress_activity);
-		findViewById(R.id.download_btn).setOnClickListener(this);
-		mMessageView = (TextView) findViewById(R.id.download_message);
-		mProgressbar = (ProgressBar) findViewById(R.id.download_progress);
-	}
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.progress_activity);
+        findViewById(R.id.download_btn).setOnClickListener(this);
+        mMessageView = (TextView) findViewById(R.id.download_message);
+        mProgressbar = (ProgressBar) findViewById(R.id.download_progress);
+    }
 
-	@Override
-	public void onClick(View v) {
-		if (v.getId() == R.id.download_btn) {
-			doDownload();
-		}
-	}
+    @Override
+    public void onClick(View v) {
+        if (v.getId() == R.id.download_btn) {
+            doDownload();
+        }
+    }
+    /**
+     * 使用Handler更新UI界面信息
+     */
+    @SuppressLint("HandlerLeak")
+    Handler mHandler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
 
-	/**
-	 * ʹ��Handler����UI������Ϣ
-	 */
-	@SuppressLint("HandlerLeak")
-	Handler mHandler = new Handler() {
-		@Override
-		public void handleMessage(Message msg) {
+            mProgressbar.setProgress(msg.getData().getInt("size"));
 
-			mProgressbar.setProgress(msg.getData().getInt("size"));
+            float temp = (float) mProgressbar.getProgress()
+                    / (float) mProgressbar.getMax();
 
-			float temp = (float) mProgressbar.getProgress()
-					/ (float) mProgressbar.getMax();
+            int progress = (int) (temp * 100);
+            if (progress == 100) {
+                Toast.makeText(MainApp.this, "下载完成！", Toast.LENGTH_LONG).show();
+            }
+            mMessageView.setText("下载进度:" + progress + " %");
 
-			int progress = (int) (temp * 100);
-			if (progress == 100) {
-				Toast.makeText(MainApp.this, "������ɣ�", Toast.LENGTH_LONG).show();
-			}
-			mMessageView.setText("���ؽ���:" + progress + " %");
+        }
+    };
 
-		}
-	};
+    /**
+     * 下载准备工作，获取SD卡路径、开启线程
+     */
+    private void doDownload() {
+        // 获取SD卡路径
+        String path = Environment.getExternalStorageDirectory()
+                + "/amosdownload/";
+        File file = new File(path);
+        // 如果SD卡目录不存在创建
+        if (!file.exists()) {
+            file.mkdir();
+        }
+        // 设置progressBar初始化
+        mProgressbar.setProgress(0);
 
-	/**
-	 * ����׼����������ȡSD��·���������߳�
-	 */
-	private void doDownload() {
-		// ��ȡSD��·��
-		String path = Environment.getExternalStorageDirectory()
-				+ "/amosdownload/";
-		File file = new File(path);
-		// ���SD��Ŀ¼�����ڴ���
-		if (!file.exists()) {
-			file.mkdir();
-		}
-		// ����progressBar��ʼ��
-		mProgressbar.setProgress(0);
+        // 简单起见，我先把URL和文件名称写死，其实这些都可以通过HttpHeader获取到
+        String downloadUrl = "http://gdown.baidu.com/data/wisegame/91319a5a1dfae322/baidu_16785426.apk";
+        String fileName = "baidu_16785426.apk";
+        int threadNum = 5;
+        String filepath = path + fileName;
+        Log.d(TAG, "download file  path:" + filepath);
+        downloadTask task = new downloadTask(downloadUrl, threadNum, filepath);
+        task.start();
+    }
 
-		// ����������Ȱ�URL���ļ�����д������ʵ��Щ������ͨ��HttpHeader��ȡ��
-		String downloadUrl = "http://gdown.baidu.com/data/wisegame/91319a5a1dfae322/baidu_16785426.apk";
-		String fileName = "baidu_16785426.apk";
-		int threadNum = 5;
-		String filepath = path + fileName;
-		Log.d(TAG, "download file  path:" + filepath);
-		downloadTask task = new downloadTask(downloadUrl, threadNum, filepath);
-		task.start();
-	}
+    /**
+     * 多线程文件下载
+     *
+     * @author yangxiaolong
+     * @2014-8-7
+     */
+    class downloadTask extends Thread {
+        private String downloadUrl;// 下载链接地址
+        private int threadNum;// 开启的线程数
+        private String filePath;// 保存文件路径地址
+        private int blockSize;// 每一个线程的下载量
 
-	/**
-	 * ���߳��ļ�����
-	 * 
-	 * @author yangxiaolong
-	 * @2014-8-7
-	 */
-	class downloadTask extends Thread {
-		private String downloadUrl;// �������ӵ�ַ
-		private int threadNum;// �������߳���
-		private String filePath;// �����ļ�·����ַ
-		private int blockSize;// ÿһ���̵߳�������
+        public downloadTask(String downloadUrl, int threadNum, String fileptah) {
+            this.downloadUrl = downloadUrl;
+            this.threadNum = threadNum;
+            this.filePath = fileptah;
+        }
 
-		public downloadTask(String downloadUrl, int threadNum, String fileptah) {
-			this.downloadUrl = downloadUrl;
-			this.threadNum = threadNum;
-			this.filePath = fileptah;
-		}
+        @Override
+        public void run() {
 
-		@Override
-		public void run() {
+            FileDownloadThread[] threads = new FileDownloadThread[threadNum];
+            try {
+                URL url = new URL(downloadUrl);
+                Log.d(TAG, "download file http path:" + downloadUrl);
+                URLConnection conn = url.openConnection();
+                // 读取下载文件总大小
+                int fileSize = conn.getContentLength();
+                if (fileSize <= 0) {
+                    System.out.println("读取文件失败");
+                    return;
+                }
+                // 设置ProgressBar最大的长度为文件Size
+                mProgressbar.setMax(fileSize);
 
-			FileDownloadThread[] threads = new FileDownloadThread[threadNum];
-			try {
-				URL url = new URL(downloadUrl);
-				Log.d(TAG, "download file http path:" + downloadUrl);
-				URLConnection conn = url.openConnection();
-				// ��ȡ�����ļ��ܴ�С
-				int fileSize = conn.getContentLength();
-				if (fileSize <= 0) {
-					System.out.println("��ȡ�ļ�ʧ��");
-					return;
-				}
-				// ����ProgressBar���ĳ���Ϊ�ļ�Size
-				mProgressbar.setMax(fileSize);
+                // 计算每条线程下载的数据长度
+                blockSize = (fileSize % threadNum) == 0 ? fileSize / threadNum
+                        : fileSize / threadNum + 1;
 
-				// ����ÿ���߳����ص����ݳ���
-				blockSize = (fileSize % threadNum) == 0 ? fileSize / threadNum
-						: fileSize / threadNum + 1;
+                Log.d(TAG, "fileSize:" + fileSize + "  blockSize:" + blockSize);
 
-				Log.d(TAG, "fileSize:" + fileSize + "  blockSize:"+blockSize);
+                File file = new File(filePath);
+                for (int i = 0; i < threads.length; i++) {
+                    // 启动线程，分别下载每个线程需要下载的部分
+                    threads[i] = new FileDownloadThread(url, file, blockSize,
+                            (i + 1));
+                    threads[i].setName("Thread:" + i);
+                    threads[i].start();
+                }
+                boolean isfinished = false;
+                int downloadedAllSize = 0;
+                while (!isfinished) {
+                    isfinished = true;
+                    // 当前所有线程下载总量
+                    downloadedAllSize = 0;
+                    for (int i = 0; i < threads.length; i++) {
+                        downloadedAllSize += threads[i].getDownloadLength();
+                        if (!threads[i].isCompleted()) {
+                            isfinished = false;
+                        }
+                    }
+                    // 通知handler去更新视图组件
+                    Message msg = new Message();
+                    msg.getData().putInt("size", downloadedAllSize);
+                    mHandler.sendMessage(msg);
+                    // Log.d(TAG, "current downloadSize:" + downloadedAllSize);
+                    Thread.sleep(1000);// 休息1秒后再读取下载进度
+                }
+                Log.d(TAG, " all of downloadSize:" + downloadedAllSize);
 
-				File file = new File(filePath);
-				for (int i = 0; i < threads.length; i++) {
-					// �����̣߳��ֱ�����ÿ���߳���Ҫ���صĲ���
-					threads[i] = new FileDownloadThread(url, file, blockSize,
-							(i + 1));
-					threads[i].setName("Thread:" + i);
-					threads[i].start();
-				}
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
 
-				boolean isfinished = false;
-				int downloadedAllSize = 0;
-				while (!isfinished) {
-					isfinished = true;
-					// ��ǰ�����߳���������
-					downloadedAllSize = 0;
-					for (int i = 0; i < threads.length; i++) {
-						downloadedAllSize += threads[i].getDownloadLength();
-						if (!threads[i].isCompleted()) {
-							isfinished = false;
-						}
-					}
-					// ֪ͨhandlerȥ������ͼ���
-					Message msg = new Message();
-					msg.getData().putInt("size", downloadedAllSize);
-					mHandler.sendMessage(msg);
-					// Log.d(TAG, "current downloadSize:" + downloadedAllSize);
-					Thread.sleep(1000);// ��Ϣ1����ٶ�ȡ���ؽ���
-				}
-				Log.d(TAG, " all of downloadSize:" + downloadedAllSize);
-
-			} catch (MalformedURLException e) {
-				e.printStackTrace();
-			} catch (IOException e) {
-				e.printStackTrace();
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-
-		}
-	}
+        }
+    }
 
 }

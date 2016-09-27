@@ -9,8 +9,8 @@ import java.net.URLConnection;
 import android.util.Log;
 
 /**
- * �ļ�������
- * 
+ * 文件下载类
+ *
  * @author yangxiaolong
  * @2014-5-6
  */
@@ -18,28 +18,28 @@ public class FileDownloadThread extends Thread {
 
 	private static final String TAG = FileDownloadThread.class.getSimpleName();
 
-	/** ��ǰ�����Ƿ���� */
+	/** 当前下载是否完成 */
 	private boolean isCompleted = false;
-	/** ��ǰ�����ļ����� */
+	/** 当前下载文件长度 */
 	private int downloadLength = 0;
-	/** �ļ�����·�� */
+	/** 文件保存路径 */
 	private File file;
-	/** �ļ�����·�� */
+	/** 文件下载路径 */
 	private URL downloadUrl;
-	/** ��ǰ�����߳�ID */
+	/** 当前下载线程ID */
 	private int threadId;
-	/** �߳��������ݳ��� */
+	/** 线程下载数据长度 */
 	private int blockSize;
 
 	/**
-	 * 
-	 * @param url:�ļ����ص�ַ
-	 * @param file:�ļ�����·��
-	 * @param blocksize:�������ݳ���
-	 * @param threadId:�߳�ID
+	 *
+	 * @param downloadUrl:文件下载地址
+	 * @param file:文件保存路径
+	 * @param blocksize:下载数据长度
+	 * @param threadId:线程ID
 	 */
 	public FileDownloadThread(URL downloadUrl, File file, int blocksize,
-			int threadId) {
+							  int threadId) {
 		this.downloadUrl = downloadUrl;
 		this.file = file;
 		this.threadId = threadId;
@@ -56,10 +56,10 @@ public class FileDownloadThread extends Thread {
 			URLConnection conn = downloadUrl.openConnection();
 			conn.setAllowUserInteraction(true);
 
-			int startPos = blockSize * (threadId - 1);//��ʼλ��
-			int endPos = blockSize * threadId - 1;//����λ��
+			int startPos = blockSize * (threadId - 1);//开始位置
+			int endPos = blockSize * threadId - 1;//结束位置
 
-			//���õ�ǰ�߳����ص���㡢�յ�
+			//设置当前线程下载的起点、终点
 			conn.setRequestProperty("Range", "bytes=" + startPos + "-" + endPos);
 			System.out.println(Thread.currentThread().getName() + "  bytes="
 					+ startPos + "-" + endPos);
@@ -99,14 +99,14 @@ public class FileDownloadThread extends Thread {
 	}
 
 	/**
-	 * �߳��ļ��Ƿ��������
+	 * 线程文件是否下载完毕
 	 */
 	public boolean isCompleted() {
 		return isCompleted;
 	}
 
 	/**
-	 * �߳������ļ�����
+	 * 线程下载文件长度
 	 */
 	public int getDownloadLength() {
 		return downloadLength;

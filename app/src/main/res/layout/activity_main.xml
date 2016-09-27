@@ -5,7 +5,9 @@
     android:id="@+id/activity_main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="com.shnu.androidthreaddemon.MainActivity">
+    android:orientation="vertical"
+    tools:context="com.shnu.androidthreaddemon.MainActivity"
+    android:gravity="center">
 
     <Button
         android:id="@+id/btn_send_message"
@@ -13,5 +15,17 @@
         android:layout_height="wrap_content"
         android:text="Hello World!"
  />
+    <Button
+        android:id="@+id/btn_mul_thread_download"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="多线程下载"
+        />
+    <Button
+        android:id="@+id/btn_resume_download"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="断点续传"
+        />
 
 </LinearLayout>
